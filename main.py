@@ -1099,7 +1099,8 @@ div[role="radiogroup"] > label:has(input:checked){ border-color:var(--gold); bac
 
 @media (max-width: 760px){
   .spread{ gap:22px 14px; }
-  .spread .slot, .spread .kartu3d{ --cw: min(var(--cwm), 40vw) !important; }
+  .spread .slot, .spread .kartu3d{ --cw: min(var(--cwm), var(--cwv)) !important; }
+  .cname{ font-size:.95rem; } .cap{ font-size:.58rem; letter-spacing:.1em; }
   .spread.pilihan, .spread.keltik{ display:flex; }
   .spread.keltik .slot.staf{ margin-left:0; }
   .spread.keltik .slot.silang{ pointer-events:auto; }
@@ -1172,6 +1173,50 @@ div[role="radiogroup"] > label:has(input:checked){ border-color:var(--gold); bac
 .grid-suit .s b{ font-family:'Cormorant Garamond',serif; font-size:1.3rem; }
 .grid-suit .s span{ display:block; color:var(--muted); font-size:.9rem; margin-top:4px; line-height:1.5; }
 
+/* ── Tampilan HP (≤ 640px, titik tumpuk kolom Streamlit) ───────────────────── */
+@media (max-width: 640px){
+  .block-container{ padding-left:1rem; padding-right:1rem; padding-top:1.2rem; }
+  .hero{ padding-bottom:14px; } .hero p{ font-size:1.1rem; }
+  .stTabs [data-baseweb="tab-list"]{ gap:0; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+  .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar{ display:none; }
+  .stTabs [data-baseweb="tab"]{ padding:8px 10px; font-size:.68rem; letter-spacing:.06em; white-space:nowrap; }
+  .panel{ padding:16px; border-radius:16px; }
+  .oracle{ padding:20px 18px; } .oracle p{ font-size:1.12rem; }
+  .judul-bagian{ margin:24px 0 10px; letter-spacing:.18em; }
+  .kepala-bacaan .meta{ font-size:.78rem; }
+
+  /* Baris tombol: tetap horizontal, kolom pengisi kosong disembunyikan */
+  [class*="st-key-baris_"] [data-testid="stHorizontalBlock"],
+  [class*="st-key-tumpukan_"] [data-testid="stHorizontalBlock"],
+  [class*="st-key-grid_"] [data-testid="stHorizontalBlock"]{ flex-wrap:wrap; gap:.6rem; }
+  [class*="st-key-baris_"] [data-testid="stColumn"]{ min-width:0 !important; flex:1 1 0 !important; }
+  [class*="st-key-baris_"] [data-testid="stColumn"]:not(:has(button)):not(:has(input)){ display:none; }
+  .stButton > button, .stDownloadButton > button{ padding:.5rem .9rem; font-size:.9rem; }
+
+  /* Potong dek: tiga tumpukan berdampingan */
+  [class*="st-key-tumpukan_"] [data-testid="stColumn"]{ min-width:0 !important; flex:1 1 0 !important; }
+  [class*="st-key-tumpukan_"] [data-testid="stColumn"]:not(:has(button)){ display:none; }
+  .tumpukan{ width:min(118px, 24vw); height:auto; aspect-ratio:350/600; }
+  .label-tumpukan{ font-size:.62rem; letter-spacing:.12em; }
+  [class*="st-key-tumpukan_"] .stButton > button{ padding:.4rem .5rem; font-size:.78rem; }
+
+  /* Ensiklopedia: grid 3 kolom */
+  [class*="st-key-grid_"] [data-testid="stColumn"]{ min-width:calc(33.33% - .6rem) !important; flex:0 1 calc(33.33% - .6rem) !important; }
+  [class*="st-key-grid_"] .stButton > button{ padding:.3rem .4rem; font-size:.72rem; }
+  .nama-grid{ font-size:.88rem; min-height:2.3em; }
+
+  /* Dialog detail kartu */
+  [data-testid="stDialog"] [data-testid="stImage"]{ max-width:220px; margin:0 auto; }
+  .detail h3{ font-size:1.6rem !important; }
+
+  /* Kocok: dek sedikit lebih kecil agar animasi tidak keluar layar */
+  .dek{ width:124px; height:212px; }
+  @keyframes kiri{ 40%{ transform:translateX(-74px) rotate(-10deg); } 60%{ transform:translateX(-64px) rotate(-8deg); } }
+  @keyframes kanan{ 40%{ transform:translateX(74px) rotate(10deg); } 60%{ transform:translateX(64px) rotate(8deg); } }
+  .meja .ket{ font-size:1.08rem; padding:0 6px; }
+  .kutipan{ padding:18px 6px; }
+}
+
 footer, #MainMenu{ visibility:hidden; }
 </style>
 """
@@ -1185,17 +1230,32 @@ def tampil(isi: str) -> None:
     st.html(isi)
 
 
+def baris(spek, key: str, grid: bool = False, tumpukan: bool = False):
+    """st.columns di dalam container berkey, agar CSS mobile bisa mengatur barisnya.
+
+    Di bawah 640px Streamlit menumpuk semua kolom menjadi lebar penuh. Container
+    ber-class st-key-baris_* / st-key-grid_* dipakai CSS untuk menjaga baris tetap
+    horizontal, menyembunyikan kolom pengisi kosong, dan membuat grid 3 kolom.
+    """
+    jenis = "grid" if grid else ("tumpukan" if tumpukan else "baris")
+    with st.container(key=f"{jenis}_{key}"):
+        return st.columns(spek)
+
+
 def judul(teks: str) -> None:
     tampil(f'<div class="judul-bagian">{teks}</div>')
 
 
-def html_slot(no: int, posisi: tuple, kartu: dict, animasi: bool, jeda: float, kelas: str = "", lebar_hp: int = 150) -> str:
+def html_slot(
+    no: int, posisi: tuple, kartu: dict, animasi: bool, jeda: float, kelas: str = "",
+    lebar_hp: int = 150, vw_hp: int = 40,
+) -> str:
     i = info_kartu(kartu["id"])
     rev = "rev" if kartu["terbalik"] else ""
     anim = "anim" if animasi else ""
     tanda = '<span class="rv">TERBALIK</span>' if kartu["terbalik"] else ""
     return (
-        f'<div class="slot p{no} {kelas}" style="grid-area:{"p1" if "silang" in kelas else f"p{no}"};--d:{jeda:.2f}s;--cwm:{lebar_hp}px">'
+        f'<div class="slot p{no} {kelas}" style="grid-area:{"p1" if "silang" in kelas else f"p{no}"};--d:{jeda:.2f}s;--cwm:{lebar_hp}px;--cwv:{vw_hp}vw">'
         f'<div class="kartu3d"><div class="inner {anim}">'
         f'<div class="face back"><img src="{uri_punggung()}" alt="Punggung kartu"/></div>'
         f'<div class="face front"><img class="{rev}" src="{uri_kartu(kartu["id"])}" alt="{html.escape(i["nama"])}"/></div>'
@@ -1218,8 +1278,9 @@ def html_spread(bacaan: dict, animasi: bool) -> str:
                 kelas = "silang"
             elif idx >= 7:
                 kelas = "staf"
-        lebar_hp = 120 if len(sp["posisi"]) > 3 else (150 if len(sp["posisi"]) == 3 else 220)
-        slot.append(html_slot(idx, posisi, kartu, animasi, 0.15 + 0.32 * (idx - 1), kelas, lebar_hp))
+        # Di HP: 1 kartu besar; 3+ kartu tampil 3 per baris.
+        lebar_hp, vw_hp = (230, 62) if len(sp["posisi"]) == 1 else (150, 27)
+        slot.append(html_slot(idx, posisi, kartu, animasi, 0.15 + 0.32 * (idx - 1), kelas, lebar_hp, vw_hp))
     return f'<div class="spread {sp["layout"]}" style="--cw:{lebar}px">{"".join(slot)}</div>'
 
 
@@ -1379,7 +1440,7 @@ def langkah_pertanyaan() -> None:
             label_visibility="collapsed",
         )
     st.write("")
-    _, tengah, _ = st.columns([1, 1.2, 1])
+    _, tengah, _ = baris([1, 1.2, 1], "lanjut")
     with tengah:
         if st.button("Lanjut ke pengocokan  ✦", type="primary", width="stretch"):
             ss.update(
@@ -1402,7 +1463,7 @@ def langkah_kocok() -> None:
         f'<div class="dek {kelas}" data-n="{n}">{gambar}</div>'
         f'<div class="hitung">{status}</div></div>'
     )
-    _, a, b, _ = st.columns([1, 1, 1, 1])
+    _, a, b, _ = baris([1, 1, 1, 1], "kocok_aksi")
     with a:
         if st.button("Kocok kartu", width="stretch", type="secondary" if n else "primary"):
             st.session_state.dek = kocok(st.session_state.dek)
@@ -1414,7 +1475,7 @@ def langkah_kocok() -> None:
             st.session_state.langkah = 2
             st.rerun()
     st.write("")
-    _, c, _ = st.columns([2, 1, 2])
+    _, c, _ = baris([2, 1, 2], "kocok_kembali")
     with c:
         if st.button("← Ubah pertanyaan", width="stretch"):
             st.session_state.langkah = 0
@@ -1427,14 +1488,14 @@ def langkah_potong() -> None:
         'pilih satu tumpukan untuk diletakkan paling atas.</div></div>'
     )
     tumpukan = "".join(f'<img src="{uri_punggung()}"/>' for _ in range(3))
-    _, *kolom, _ = st.columns([0.6, 1, 1, 1, 0.6])
+    _, *kolom, _ = baris([0.6, 1, 1, 1, 0.6], "potong", tumpukan=True)
     for idx, (k, nama) in enumerate(zip(kolom, ["Kiri", "Tengah", "Kanan"])):
         with k:
             tampil(f'<div class="tumpukan">{tumpukan}</div><div class="label-tumpukan">{nama.upper()}</div>')
             if st.button(f"Pilih {nama.lower()}", key=f"potong_{idx}", width="stretch"):
                 buka_kartu(idx)
     st.write("")
-    _, c, _ = st.columns([2, 1, 2])
+    _, c, _ = baris([2, 1, 2], "potong_kembali")
     with c:
         if st.button("← Kocok lagi", width="stretch"):
             st.session_state.langkah = 1
@@ -1506,7 +1567,7 @@ def langkah_hasil() -> None:
     ss.animasi_buka = False
     tampil_hasil(bacaan, animasi)
     st.write("")
-    _, a, b, _ = st.columns([1, 1.1, 1.1, 1])
+    _, a, b, _ = baris([1, 1.1, 1.1, 1], "hasil_aksi")
     with a:
         st.download_button(
             "Unduh hasil (.md)",
@@ -1535,7 +1596,7 @@ def kartu_harian(nama: str, tanggal: str) -> dict:
 def halaman_harian() -> None:
     sekarang = waktu_sekarang()
     tanggal = sekarang.strftime("%Y-%m-%d")
-    _, tengah, _ = st.columns([1, 1.6, 1])
+    _, tengah, _ = baris([1, 1.6, 1], "harian_nama")
     with tengah:
         nama = st.text_input(
             "Nama panggilanmu (opsional)",
@@ -1637,7 +1698,7 @@ def halaman_ensiklopedia() -> None:
         return
     per_baris = 6
     for awal in range(0, len(hasil), per_baris):
-        kolom = st.columns(per_baris)
+        kolom = baris(per_baris, f"{awal}", grid=True)
         for k, cid in zip(kolom, hasil[awal:awal + per_baris]):
             with k:
                 p = path_kartu(cid)
@@ -1672,7 +1733,7 @@ def halaman_riwayat() -> None:
         with st.expander(f"✦  {b['pertanyaan']}  —  {sp['nama']} · {b['waktu_teks']}"):
             tampil(html_mini(b["kartu"]))
             tampil(f'<div class="kutipan" style="padding:10px"><div class="isi" style="font-size:1.3rem">{html.escape(inti_pesan(b))}</div></div>')
-            a, c = st.columns(2)
+            a, c = baris(2, f"riwayat_{b['id']}")
             with a:
                 if st.button("Buka bacaan ini", key=f"buka_{b['id']}", width="stretch"):
                     st.session_state.update(bacaan=b, langkah=3, animasi_buka=True)
