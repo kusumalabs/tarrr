@@ -1054,14 +1054,31 @@ div[role="radiogroup"] > label:has(input:checked){ border-color:var(--gold); bac
 .kepala-bacaan .meta{ color:var(--muted); font-size:.85rem; margin-top:8px; }
 .spread{ display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start; gap:30px 24px; padding:28px 6px 10px; }
 .slot{ width:var(--cw); display:flex; flex-direction:column; align-items:center; position:relative; }
-.kartu3d{ width:var(--cw); aspect-ratio:350/600; perspective:1200px; }
-.inner{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transform:rotateY(180deg); }
-.inner.anim{ animation:balik 1s cubic-bezier(.2,.75,.2,1) var(--d) both; }
-@keyframes balik{ 0%{ transform:translateY(-26px) rotateY(0deg); opacity:0; } 18%{ opacity:1; } 55%{ transform:translateY(-10px) rotateY(0deg); } 100%{ transform:translateY(0) rotateY(180deg); } }
-.face{ position:absolute; inset:0; border-radius:12px; overflow:hidden; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+/* Kartu: sisi muka selalu tampil secara default. Animasi balik dibuat dua tahap
+   (punggung memutar 0→90°, lalu muka -90→0°) sehingga tidak bergantung pada
+   preserve-3d/backface-visibility yang sering diratakan di dalam halaman Streamlit. */
+.kartu3d{ width:var(--cw); aspect-ratio:350/600; position:relative; }
+.inner{ position:relative; width:100%; height:100%; }
+.face{ position:absolute; inset:0; border-radius:12px; overflow:hidden;
   box-shadow:0 18px 40px -16px rgba(0,0,0,.9), 0 0 0 1px rgba(214,180,106,.25); }
 .face img{ width:100%; height:100%; object-fit:cover; display:block; }
-.front{ transform:rotateY(180deg); background:#efe4c8; }
+.front{ background:#efe4c8; opacity:1; }
+.back{ opacity:0; visibility:hidden; }
+.inner.anim .back{ animation:tutup 1.5s ease-in-out var(--d,0s) both; }
+.inner.anim .front{ animation:buka 1.5s ease-out var(--d,0s) both; }
+@keyframes tutup{
+  0%{ opacity:0; visibility:visible; transform:perspective(900px) translateY(-26px) rotateY(0deg); }
+  15%{ opacity:1; visibility:visible; }
+  55%{ opacity:1; visibility:visible; transform:perspective(900px) translateY(-8px) rotateY(0deg); }
+  77%{ opacity:1; visibility:visible; transform:perspective(900px) translateY(-4px) rotateY(90deg); }
+  78%, 100%{ opacity:0; visibility:hidden; transform:perspective(900px) rotateY(90deg); }
+}
+@keyframes buka{
+  0%, 77%{ opacity:0; transform:perspective(900px) translateY(-4px) rotateY(-90deg); }
+  78%{ opacity:1; transform:perspective(900px) translateY(-4px) rotateY(-90deg); }
+  100%{ opacity:1; transform:perspective(900px) translateY(0) rotateY(0deg); }
+}
+@media (prefers-reduced-motion: reduce){ .inner.anim .back, .inner.anim .front{ animation:none; } }
 .front img.rev{ transform:rotate(180deg); }
 .slot:hover .face.front{ box-shadow:0 22px 50px -14px rgba(214,180,106,.45), 0 0 0 1px var(--gold); }
 .cap{ margin-top:12px; font-family:'Cinzel',serif; letter-spacing:.14em; font-size:.66rem; text-transform:uppercase; color:var(--gold); text-align:center; line-height:1.4; }
